@@ -30,7 +30,7 @@ import datetime
 
 from mcp.server.fastmcp import FastMCP
 from starlette.requests import Request
-from starlette.responses import JSONResponse, HTMLResponse
+from starlette.responses import JSONResponse, HTMLResponse, FileResponse
 import yfinance as yf
 
 mcp = FastMCP("MacroMarketTools")
@@ -276,15 +276,14 @@ async def api_stock(request: Request) -> JSONResponse:
 # ---------------------------------------------------------------------------
 # 프론트엔드 화면 (index.html)을 같은 서버의 "/" 에서 그대로 서빙합니다.
 # 별도 호스팅 없이 https://<서비스>.onrender.com/ 접속만으로 화면이 뜹니다.
+# (index.html이 Claude Design에서 내보낸 원본 파일이라 용량이 커서 FileResponse로 서빙합니다.)
 # ---------------------------------------------------------------------------
 
 @mcp.custom_route("/", methods=["GET"])
-async def index(request: Request) -> HTMLResponse:
-    try:
-        with open(_INDEX_HTML_PATH, "r", encoding="utf-8") as f:
-            return HTMLResponse(f.read())
-    except FileNotFoundError:
+async def index(request: Request):
+    if not os.path.exists(_INDEX_HTML_PATH):
         return HTMLResponse("<h1>index.html이 서버에 없습니다.</h1>", status_code=404)
+    return FileResponse(_INDEX_HTML_PATH, media_type="text/html")
 
 
 if __name__ == "__main__":
