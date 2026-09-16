@@ -8,13 +8,14 @@
   :root {
     --bg: #f5f6f8;
     --card: #ffffff;
-    --border: #e5e7eb;
+    --border: #e8eaed;
     --text: #16181d;
-    --text-muted: #6b7280;
-    --accent: #2f6fed;
+    --text-muted: #8a8f98;
+    --accent: #6d5ef5;
+    --accent-soft: #f0edff;
     --up: #e0392c;
     --down: #2f6fed;
-    --chip-bg: #eef2ff;
+    --sidebar-w: 220px;
   }
   * { box-sizing: border-box; }
   body {
@@ -22,19 +23,45 @@
     background: var(--bg);
     color: var(--text);
     font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
-    padding: 24px 16px 48px;
   }
-  .wrap { max-width: 720px; margin: 0 auto; }
 
-  header.page-head { margin-bottom: 20px; }
-  header.page-head h1 { font-size: 20px; margin: 0 0 4px; }
+  .app-shell { display: flex; min-height: 100vh; }
+
+  /* ---- 사이드바 ---- */
+  .sidebar {
+    width: var(--sidebar-w);
+    flex-shrink: 0;
+    background: var(--card);
+    border-right: 1px solid var(--border);
+    padding: 22px 14px;
+  }
+  .brand { padding: 0 8px 20px; }
+  .brand .name { font-size: 17px; font-weight: 800; }
+  .brand .sub { font-size: 12px; color: var(--text-muted); margin-top: 2px; }
+
+  .nav { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; }
+  .nav li a {
+    display: block;
+    padding: 10px 12px;
+    border-radius: 9px;
+    font-size: 14px;
+    color: var(--text-muted);
+    text-decoration: none;
+    font-weight: 500;
+  }
+  .nav li a.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+  .nav li a.disabled { color: #c7cad1; cursor: default; }
+  .nav li a .soon { font-size: 10px; margin-left: 6px; color: #c7cad1; }
+
+  /* ---- 메인 ---- */
+  .main { flex: 1; min-width: 0; padding: 28px 28px 60px; }
+  .main-inner { max-width: 760px; margin: 0 auto; }
+
+  header.page-head { margin-bottom: 18px; }
+  header.page-head h1 { font-size: 19px; margin: 0 0 4px; }
   header.page-head p { margin: 0; color: var(--text-muted); font-size: 13px; }
 
-  .search-row {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 20px;
-  }
+  .search-row { display: flex; gap: 8px; margin-bottom: 18px; }
   .search-row input {
     flex: 1;
     padding: 12px 14px;
@@ -43,14 +70,15 @@
     font-size: 15px;
     background: var(--card);
   }
+  .search-row input:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
   .search-row button {
-    padding: 12px 18px;
+    padding: 12px 20px;
     border: none;
     border-radius: 10px;
     background: var(--accent);
     color: #fff;
     font-size: 15px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
   }
   .search-row button:disabled { opacity: 0.6; cursor: default; }
@@ -60,34 +88,37 @@
     border: 1px solid var(--border);
     border-radius: 14px;
     padding: 20px;
-    margin-bottom: 16px;
+    margin-bottom: 14px;
   }
-  .card h2 {
-    font-size: 14px;
-    color: var(--text-muted);
-    margin: 0 0 12px;
-    font-weight: 600;
-  }
+  .card h2 { font-size: 13px; color: var(--text-muted); margin: 0 0 12px; font-weight: 700; }
 
-  .stock-name { font-size: 15px; color: var(--text-muted); margin-bottom: 2px; }
-  .stock-price-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-  .stock-price { font-size: 32px; font-weight: 700; }
-  .stock-change { font-size: 16px; font-weight: 600; }
+  .stock-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .stock-name-row { display: flex; align-items: center; gap: 8px; }
+  .stock-name { font-size: 16px; font-weight: 700; }
+  .ticker-badge {
+    font-size: 11px; font-weight: 700; color: var(--text-muted);
+    background: #f2f3f5; padding: 2px 8px; border-radius: 999px;
+  }
+  .stock-price-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
+  .stock-price { font-size: 34px; font-weight: 800; }
+  .stock-change { font-size: 15px; font-weight: 700; }
   .stock-change.up { color: var(--up); }
   .stock-change.down { color: var(--down); }
   .stock-meta { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
 
+  .sparkline { margin-top: 4px; }
+
   .fin-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-    gap: 12px;
-    margin-top: 16px;
+    gap: 10px;
+    margin-top: 18px;
   }
   .fin-item { background: #fafbfc; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
-  .fin-item .label { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
-  .fin-item .value { font-size: 15px; font-weight: 600; }
+  .fin-item .label { font-size: 11px; color: var(--text-muted); margin-bottom: 2px; }
+  .fin-item .value { font-size: 15px; font-weight: 700; }
 
-  .news-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .news-item { padding: 11px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
   .news-item:last-child { border-bottom: none; }
   .news-item a { color: var(--text); text-decoration: none; }
   .news-item a:hover { color: var(--accent); }
@@ -97,71 +128,92 @@
   .macro-item .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
   .macro-item .value { font-size: 18px; font-weight: 700; }
   .badge {
-    display: inline-block;
-    font-size: 12px;
-    font-weight: 600;
-    padding: 3px 9px;
-    border-radius: 999px;
-    background: var(--chip-bg);
-    color: var(--accent);
+    display: inline-block; font-size: 12px; font-weight: 700;
+    padding: 3px 9px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
   }
   .badge.high { background: #fdecea; color: var(--up); }
 
-  .empty, .error, .loading {
-    text-align: center;
-    color: var(--text-muted);
-    padding: 32px 0;
-    font-size: 14px;
-  }
+  .empty, .error, .loading { text-align: center; color: var(--text-muted); padding: 32px 0; font-size: 14px; }
   .error { color: var(--up); }
 
   [hidden] { display: none !important; }
+
+  @media (max-width: 720px) {
+    .app-shell { flex-direction: column; }
+    .sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); padding: 14px; }
+    .nav { flex-direction: row; overflow-x: auto; }
+    .main { padding: 20px 16px 48px; }
+  }
 </style>
 </head>
 <body>
-  <div class="wrap">
-    <header class="page-head">
-      <h1>종목노트</h1>
-      <p>티커를 입력하면 실시간 시세와 관련 뉴스, 거시 환경을 한 번에 보여줍니다.</p>
-    </header>
-
-    <div class="search-row">
-      <input id="ticker-input" type="text" placeholder="예: NVDA, AAPL, 005930.KS (삼성전자)" />
-      <button id="search-btn">조회</button>
-    </div>
-
-    <div id="status-area"></div>
-
-    <section id="stock-card" class="card" hidden>
-      <h2 id="stock-ticker-label">종목</h2>
-      <div class="stock-name" id="stock-name">-</div>
-      <div class="stock-price-row">
-        <span class="stock-price" id="stock-price">-</span>
-        <span class="stock-change" id="stock-change"></span>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="name">종목노트</div>
+        <div class="sub">투자 종목과 관심 종목을 한 화면에서</div>
       </div>
-      <div class="stock-meta" id="stock-volume"></div>
+      <ul class="nav">
+        <li><a href="#" class="disabled">대시보드<span class="soon">준비중</span></a></li>
+        <li><a href="#" class="disabled">관심 종목<span class="soon">준비중</span></a></li>
+        <li><a href="#" class="active">종목 상세</a></li>
+        <li><a href="#" class="disabled">뉴스·리포트<span class="soon">준비중</span></a></li>
+      </ul>
+    </aside>
 
-      <div class="fin-grid" id="fin-grid"></div>
-    </section>
+    <main class="main">
+      <div class="main-inner">
+        <header class="page-head">
+          <h1>종목 상세</h1>
+          <p>티커를 입력하면 실시간 시세와 관련 뉴스, 거시 환경을 한 번에 보여줍니다.</p>
+        </header>
 
-    <section id="news-card" class="card" hidden>
-      <h2>관련 뉴스</h2>
-      <div id="news-list"></div>
-    </section>
-
-    <section class="card">
-      <h2>오늘의 시장 환경</h2>
-      <div class="macro-row">
-        <div class="macro-item">
-          <div class="label">미국 10년물 국채 금리</div>
-          <div class="value" id="macro-yield">불러오는 중…</div>
+        <div class="search-row">
+          <input id="ticker-input" type="text" placeholder="예: NVDA, AAPL, 005930.KS (삼성전자)" />
+          <button id="search-btn">조회</button>
         </div>
-        <div class="macro-item">
-          <div class="label">파생상품 만기 일정</div>
-          <div class="value" id="macro-schedule">불러오는 중…</div>
-        </div>
+
+        <div id="status-area"></div>
+
+        <section id="stock-card" class="card" hidden>
+          <div class="stock-top">
+            <div>
+              <div class="stock-name-row">
+                <span class="stock-name" id="stock-name">-</span>
+                <span class="ticker-badge" id="stock-ticker-label">-</span>
+              </div>
+              <div class="stock-price-row">
+                <span class="stock-price" id="stock-price">-</span>
+                <span class="stock-change" id="stock-change"></span>
+              </div>
+              <div class="stock-meta" id="stock-volume"></div>
+            </div>
+            <svg id="sparkline" class="sparkline" width="140" height="48" viewBox="0 0 140 48"></svg>
+          </div>
+
+          <div class="fin-grid" id="fin-grid"></div>
+        </section>
+
+        <section id="news-card" class="card" hidden>
+          <h2>관련 뉴스</h2>
+          <div id="news-list"></div>
+        </section>
+
+        <section class="card">
+          <h2>오늘의 시장 환경</h2>
+          <div class="macro-row">
+            <div class="macro-item">
+              <div class="label">미국 10년물 국채 금리</div>
+              <div class="value" id="macro-yield">불러오는 중…</div>
+            </div>
+            <div class="macro-item">
+              <div class="label">파생상품 만기 일정</div>
+              <div class="value" id="macro-schedule">불러오는 중…</div>
+            </div>
+          </div>
+        </section>
       </div>
-    </section>
+    </main>
   </div>
 
 <script>
@@ -183,6 +235,7 @@
     newsList: document.getElementById("news-list"),
     macroYield: document.getElementById("macro-yield"),
     macroSchedule: document.getElementById("macro-schedule"),
+    sparkline: document.getElementById("sparkline"),
   };
 
   function fmtNum(n, digits = 2) {
@@ -192,6 +245,35 @@
 
   function setStatus(html) {
     els.status.innerHTML = html;
+  }
+
+  function drawSparkline(history, up) {
+    const svg = els.sparkline;
+    svg.innerHTML = "";
+    if (!history || history.length < 2) return;
+
+    const closes = history.map(h => h.close);
+    const min = Math.min(...closes);
+    const max = Math.max(...closes);
+    const w = 140, h = 48, pad = 4;
+    const range = max - min || 1;
+
+    const points = closes.map((c, i) => {
+      const x = pad + (i / (closes.length - 1)) * (w - pad * 2);
+      const y = h - pad - ((c - min) / range) * (h - pad * 2);
+      return `${x.toFixed(1)},${y.toFixed(1)}`;
+    }).join(" ");
+
+    const color = up ? "#e0392c" : "#2f6fed";
+    const ns = "http://www.w3.org/2000/svg";
+    const polyline = document.createElementNS(ns, "polyline");
+    polyline.setAttribute("points", points);
+    polyline.setAttribute("fill", "none");
+    polyline.setAttribute("stroke", color);
+    polyline.setAttribute("stroke-width", "2");
+    polyline.setAttribute("stroke-linecap", "round");
+    polyline.setAttribute("stroke-linejoin", "round");
+    svg.appendChild(polyline);
   }
 
   async function loadStock(ticker) {
@@ -214,8 +296,9 @@
       els.name.textContent = data.name;
       els.price.textContent = `${fmtNum(data.price)} ${data.currency || ""}`.trim();
 
+      let up = true;
       if (data.change !== null && data.change !== undefined) {
-        const up = data.change >= 0;
+        up = data.change >= 0;
         const sign = up ? "+" : "";
         els.change.textContent = `${sign}${fmtNum(data.change)} (${sign}${fmtNum(data.change_pct)}%)`;
         els.change.className = "stock-change " + (up ? "up" : "down");
@@ -224,6 +307,7 @@
       }
 
       els.volume.textContent = data.volume ? `거래량 ${fmtNum(data.volume, 0)}` : "";
+      drawSparkline(data.history, up);
 
       const finItems = [
         ["시가총액", data.market_cap ? `${fmtNum(data.market_cap, 0)} ${data.currency || ""}` : null],
