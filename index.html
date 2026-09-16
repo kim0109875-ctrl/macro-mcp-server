@@ -1,0 +1,296 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<title>종목노트</title>
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --card: #ffffff;
+    --border: #e5e7eb;
+    --text: #16181d;
+    --text-muted: #6b7280;
+    --accent: #2f6fed;
+    --up: #e0392c;
+    --down: #2f6fed;
+    --chip-bg: #eef2ff;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Pretendard", "Apple SD Gothic Neo", "Segoe UI", sans-serif;
+    padding: 24px 16px 48px;
+  }
+  .wrap { max-width: 720px; margin: 0 auto; }
+
+  header.page-head { margin-bottom: 20px; }
+  header.page-head h1 { font-size: 20px; margin: 0 0 4px; }
+  header.page-head p { margin: 0; color: var(--text-muted); font-size: 13px; }
+
+  .search-row {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .search-row input {
+    flex: 1;
+    padding: 12px 14px;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    font-size: 15px;
+    background: var(--card);
+  }
+  .search-row button {
+    padding: 12px 18px;
+    border: none;
+    border-radius: 10px;
+    background: var(--accent);
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .search-row button:disabled { opacity: 0.6; cursor: default; }
+
+  .card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 20px;
+    margin-bottom: 16px;
+  }
+  .card h2 {
+    font-size: 14px;
+    color: var(--text-muted);
+    margin: 0 0 12px;
+    font-weight: 600;
+  }
+
+  .stock-name { font-size: 15px; color: var(--text-muted); margin-bottom: 2px; }
+  .stock-price-row { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .stock-price { font-size: 32px; font-weight: 700; }
+  .stock-change { font-size: 16px; font-weight: 600; }
+  .stock-change.up { color: var(--up); }
+  .stock-change.down { color: var(--down); }
+  .stock-meta { margin-top: 4px; font-size: 13px; color: var(--text-muted); }
+
+  .fin-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 12px;
+    margin-top: 16px;
+  }
+  .fin-item { background: #fafbfc; border: 1px solid var(--border); border-radius: 10px; padding: 10px 12px; }
+  .fin-item .label { font-size: 12px; color: var(--text-muted); margin-bottom: 2px; }
+  .fin-item .value { font-size: 15px; font-weight: 600; }
+
+  .news-item { padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 14px; }
+  .news-item:last-child { border-bottom: none; }
+  .news-item a { color: var(--text); text-decoration: none; }
+  .news-item a:hover { color: var(--accent); }
+
+  .macro-row { display: flex; gap: 12px; flex-wrap: wrap; }
+  .macro-item { flex: 1; min-width: 180px; }
+  .macro-item .label { font-size: 12px; color: var(--text-muted); margin-bottom: 4px; }
+  .macro-item .value { font-size: 18px; font-weight: 700; }
+  .badge {
+    display: inline-block;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 3px 9px;
+    border-radius: 999px;
+    background: var(--chip-bg);
+    color: var(--accent);
+  }
+  .badge.high { background: #fdecea; color: var(--up); }
+
+  .empty, .error, .loading {
+    text-align: center;
+    color: var(--text-muted);
+    padding: 32px 0;
+    font-size: 14px;
+  }
+  .error { color: var(--up); }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="page-head">
+      <h1>종목노트</h1>
+      <p>티커를 입력하면 실시간 시세와 관련 뉴스, 거시 환경을 한 번에 보여줍니다.</p>
+    </header>
+
+    <div class="search-row">
+      <input id="ticker-input" type="text" placeholder="예: NVDA, AAPL, 005930.KS (삼성전자)" />
+      <button id="search-btn">조회</button>
+    </div>
+
+    <div id="status-area"></div>
+
+    <section id="stock-card" class="card" hidden>
+      <h2 id="stock-ticker-label">종목</h2>
+      <div class="stock-name" id="stock-name">-</div>
+      <div class="stock-price-row">
+        <span class="stock-price" id="stock-price">-</span>
+        <span class="stock-change" id="stock-change"></span>
+      </div>
+      <div class="stock-meta" id="stock-volume"></div>
+
+      <div class="fin-grid" id="fin-grid"></div>
+    </section>
+
+    <section id="news-card" class="card" hidden>
+      <h2>관련 뉴스</h2>
+      <div id="news-list"></div>
+    </section>
+
+    <section class="card">
+      <h2>오늘의 시장 환경</h2>
+      <div class="macro-row">
+        <div class="macro-item">
+          <div class="label">미국 10년물 국채 금리</div>
+          <div class="value" id="macro-yield">불러오는 중…</div>
+        </div>
+        <div class="macro-item">
+          <div class="label">파생상품 만기 일정</div>
+          <div class="value" id="macro-schedule">불러오는 중…</div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+<script>
+  // 같은 서버에서 서빙되므로 상대 경로로 호출합니다 (별도 도메인이면 절대 URL로 바꿔주세요).
+  const API_BASE = "";
+
+  const els = {
+    input: document.getElementById("ticker-input"),
+    btn: document.getElementById("search-btn"),
+    status: document.getElementById("status-area"),
+    stockCard: document.getElementById("stock-card"),
+    tickerLabel: document.getElementById("stock-ticker-label"),
+    name: document.getElementById("stock-name"),
+    price: document.getElementById("stock-price"),
+    change: document.getElementById("stock-change"),
+    volume: document.getElementById("stock-volume"),
+    finGrid: document.getElementById("fin-grid"),
+    newsCard: document.getElementById("news-card"),
+    newsList: document.getElementById("news-list"),
+    macroYield: document.getElementById("macro-yield"),
+    macroSchedule: document.getElementById("macro-schedule"),
+  };
+
+  function fmtNum(n, digits = 2) {
+    if (n === null || n === undefined) return "-";
+    return Number(n).toLocaleString("ko-KR", { maximumFractionDigits: digits });
+  }
+
+  function setStatus(html) {
+    els.status.innerHTML = html;
+  }
+
+  async function loadStock(ticker) {
+    els.btn.disabled = true;
+    setStatus('<div class="loading">조회 중…</div>');
+    els.stockCard.hidden = true;
+    els.newsCard.hidden = true;
+
+    try {
+      const res = await fetch(`${API_BASE}/api/stock/${encodeURIComponent(ticker)}`);
+      const data = await res.json();
+
+      if (data.error) {
+        setStatus(`<div class="error">${data.error}</div>`);
+        return;
+      }
+
+      setStatus("");
+      els.tickerLabel.textContent = data.ticker;
+      els.name.textContent = data.name;
+      els.price.textContent = `${fmtNum(data.price)} ${data.currency || ""}`.trim();
+
+      if (data.change !== null && data.change !== undefined) {
+        const up = data.change >= 0;
+        const sign = up ? "+" : "";
+        els.change.textContent = `${sign}${fmtNum(data.change)} (${sign}${fmtNum(data.change_pct)}%)`;
+        els.change.className = "stock-change " + (up ? "up" : "down");
+      } else {
+        els.change.textContent = "";
+      }
+
+      els.volume.textContent = data.volume ? `거래량 ${fmtNum(data.volume, 0)}` : "";
+
+      const finItems = [
+        ["시가총액", data.market_cap ? `${fmtNum(data.market_cap, 0)} ${data.currency || ""}` : null],
+        ["PER", data.per ? fmtNum(data.per) : null],
+        ["PBR", data.pbr ? fmtNum(data.pbr) : null],
+        ["EPS", data.eps ? fmtNum(data.eps) : null],
+      ].filter(([, v]) => v);
+
+      els.finGrid.innerHTML = finItems
+        .map(([label, value]) => `
+          <div class="fin-item">
+            <div class="label">${label}</div>
+            <div class="value">${value}</div>
+          </div>
+        `).join("");
+
+      els.stockCard.hidden = false;
+
+      if (data.news && data.news.length) {
+        els.newsList.innerHTML = data.news.map(n => `
+          <div class="news-item">
+            ${n.link ? `<a href="${n.link}" target="_blank" rel="noopener">${n.title}</a>` : n.title}
+          </div>
+        `).join("");
+        els.newsCard.hidden = false;
+      }
+    } catch (e) {
+      setStatus(`<div class="error">데이터를 불러오지 못했습니다: ${e}</div>`);
+    } finally {
+      els.btn.disabled = false;
+    }
+  }
+
+  async function loadMacro() {
+    try {
+      const res = await fetch(`${API_BASE}/api/treasury`);
+      const data = await res.json();
+      if (data.error) {
+        els.macroYield.textContent = "조회 실패";
+      } else {
+        const sign = data.diff_pct >= 0 ? "+" : "";
+        els.macroYield.innerHTML = `${fmtNum(data.yield_pct)}% <span style="font-size:13px;color:var(--text-muted);">(${sign}${fmtNum(data.diff_pct)}%p)</span>`;
+      }
+    } catch (e) {
+      els.macroYield.textContent = "조회 실패";
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/api/schedule`);
+      const data = await res.json();
+      const cls = data.volatility_level === "high" ? "badge high" : "badge";
+      const label = data.is_witching_week ? "네마녀의 날 주간" : (data.is_witching_month ? "만기월 (일반 주간)" : "평이한 주간");
+      els.macroSchedule.innerHTML = `<span class="${cls}">${label}</span>`;
+    } catch (e) {
+      els.macroSchedule.textContent = "조회 실패";
+    }
+  }
+
+  els.btn.addEventListener("click", () => {
+    const t = els.input.value.trim();
+    if (t) loadStock(t);
+  });
+  els.input.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") els.btn.click();
+  });
+
+  loadMacro();
+</script>
+</body>
+</html>
