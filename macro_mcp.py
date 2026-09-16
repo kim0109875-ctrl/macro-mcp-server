@@ -157,6 +157,11 @@ def _fetch_stock_info(ticker: str) -> dict:
             if title:
                 news_items.append({"title": title, "link": link})
 
+        history = [
+            {"date": idx.strftime("%m/%d"), "close": round(float(row), 2)}
+            for idx, row in hist["Close"].items()
+        ]
+
         return {
             "ticker": ticker,
             "name": name,
@@ -171,6 +176,7 @@ def _fetch_stock_info(ticker: str) -> dict:
             "pbr": info.get("priceToBook"),
             "eps": info.get("trailingEps"),
             "news": news_items,
+            "history": history,
         }
     except Exception as e:
         return {"error": f"'{ticker}' 정보를 가져오는데 실패했습니다: {e}"}
