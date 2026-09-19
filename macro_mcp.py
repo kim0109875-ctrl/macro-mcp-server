@@ -190,6 +190,21 @@ def _market_session() -> dict:
     return {"sessionLabel": label, "asOf": now.isoformat(), "isOpen": is_open}
 
 
+def _get_info_with_retry(t, tries: int = 2) -> dict:
+    """yfinance의 .info는 history()보다 훨씬 자주 실패/차단되는 별도 엔드포인트를 씁니다
+    (야후 쪽 크럼(crumb) 인증이 간헐적으로 풀리는 경우가 있음). 한 번 비어서 돌아와도
+    바로 포기하지 않고 한 번 더 시도합니다 (그래도 실패하면 빈 dict — 화면에서는 해당
+    필드만 비어 보이고 나머지는 정상 표시됩니다)."""
+    for _ in range(tries):
+        try:
+            info = t.info
+            if info:
+                return info
+        except Exception:
+            pass
+    return {}
+
+
 def _fetch_stock_info(ticker: str) -> dict:
     try:
         t = yf.Ticker(ticker)
@@ -199,13 +214,13 @@ def _fetch_stock_info(ticker: str) -> dict:
                 "error": f"'{ticker}' 종목 데이터를 찾을 수 없습니다. 티커 형식을 확인해 주세요 "
                          f"(한국 주식은 .KS/.KQ 필요)."
             }
-        try:
-            info = t.info or {}
-        except Exception:
-            info = {}
+        info = _get_info_with_retry(t)
 
         name = info.get("longName") or info.get("shortName") or ticker
-        currency = info.get("currency", "")
+        # .info가 실패해서 currency가 비어있을 때, 국내(.KS/.KQ) 티커를 외화로 잘못 취급하면
+        # 포트폴리오 평가금액에 환율(USD/KRW)이 이중으로 곱해져 손익이 수십~수백 배로
+        # 부풀려지는 심각한 계산 오류가 생깁니다. 티커 접미사로 안전하게 기본값을 채웁니다.
+        currency = info.get("currency") or ("KRW" if ticker.endswith((".KS", ".KQ")) else "")
         latest_close = float(hist["Close"].iloc[-1])
         prev_close = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else info.get("previousClose")
         volume = int(hist["Volume"].iloc[-1]) if "Volume" in hist.columns and len(hist) else info.get("volume")
@@ -618,15 +633,18 @@ def _fetch_holding_row(h: dict, fx: float | None, info: dict | None = None) -> d
     currency = info["currency"]
     eval_amt = price * h["qty"]
     cost_amt = h["avg_price"] * h["qty"]
+    # currency가 비어있는 경우(.info 조회 실패 등)는 원화로 잘못 이중환산되지 않도록
+    # "명확히 원화가 아니라고 확인된 경우"에만 외화로 취급합니다 (아래 두 계산 모두 동일 기준).
+    is_foreign = bool(currency) and currency.upper() != "KRW"
     eval_krw, cost_krw, fx_ok = eval_amt, cost_amt, True
-    if currency and currency.upper() != "KRW":
+    if is_foreign:
         if fx:
             eval_krw, cost_krw = eval_amt * fx, cost_amt * fx
         else:
             fx_ok = False
     pnl = eval_amt - cost_amt
     pnl_pct = (pnl / cost_amt * 100) if cost_amt else None
-    day_pnl_krw = (info["change"] * h["qty"] * (fx if (currency.upper() != "KRW" and fx) else 1)) \
+    day_pnl_krw = (info["change"] * h["qty"] * (fx if (is_foreign and fx) else 1)) \
         if info.get("change") is not None and fx_ok else 0
     row.update({
         "price": price, "currency": currency, "changeRate": info["change_pct"],
