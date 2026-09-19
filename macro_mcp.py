@@ -49,6 +49,14 @@ mcp = FastMCP("MacroMarketTools")
 _INDEX_HTML_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "index.html")
 _KST = datetime.timezone(datetime.timedelta(hours=9))
 
+
+def _today_kst() -> datetime.date:
+    """서버(Render)는 보통 UTC로 돌아가서 datetime.date.today()를 그냥 쓰면 한국시간 자정~
+    오전 9시 사이(그 구간의 UTC 날짜는 아직 전날)에는 '오늘'이 하루 밀려서 D-day/이벤트
+    캘린더/네마녀의 날 판정이 하루씩 어긋납니다. 이 앱은 한국 시장 기준 화면이므로 항상
+    KST 기준 날짜를 씁니다."""
+    return datetime.datetime.now(_KST).date()
+
 # ---------------------------------------------------------------------------
 # 짧은 TTL 응답 캐시
 #
@@ -156,7 +164,7 @@ def _is_witching_month(d: datetime.date) -> bool:
 
 
 def _fetch_market_schedule() -> dict:
-    today = datetime.date.today()
+    today = _today_kst()
     is_witching_month = _is_witching_month(today)
     is_witching_week = _is_witching_week(today)
     if is_witching_week:
@@ -205,6 +213,15 @@ def _get_info_with_retry(t, tries: int = 2) -> dict:
     return {}
 
 
+# yfinance의 info.exchange는 "NMS"/"NYQ" 같은 원시 거래소 코드를 그대로 주는데, 화면에는
+# 사람이 알아보는 이름으로 보여줘야 해서 흔한 코드만 매핑합니다 (목록에 없는 코드는 원본
+# 그대로 표시 — 화면이 비는 것보다 낫다는 판단).
+_EXCHANGE_LABEL = {
+    "NMS": "NASDAQ", "NGM": "NASDAQ", "NCM": "NASDAQ",
+    "NYQ": "NYSE", "ASE": "NYSE American", "PCX": "NYSE Arca", "BATS": "BATS",
+}
+
+
 def _fetch_stock_info(ticker: str) -> dict:
     try:
         t = yf.Ticker(ticker)
@@ -217,10 +234,12 @@ def _fetch_stock_info(ticker: str) -> dict:
         info = _get_info_with_retry(t)
 
         name = info.get("longName") or info.get("shortName") or ticker
-        # .info가 실패해서 currency가 비어있을 때, 국내(.KS/.KQ) 티커를 외화로 잘못 취급하면
-        # 포트폴리오 평가금액에 환율(USD/KRW)이 이중으로 곱해져 손익이 수십~수백 배로
-        # 부풀려지는 심각한 계산 오류가 생깁니다. 티커 접미사로 안전하게 기본값을 채웁니다.
-        currency = info.get("currency") or ("KRW" if ticker.endswith((".KS", ".KQ")) else "")
+        # .info가 실패해서 currency가 비어있을 때를 대비한 안전장치. 이 서비스에서 다루는
+        # 티커는 국내(.KS/.KQ) 아니면 미국 상장(NASDAQ/NYSE, 접미사 없음) 둘 중 하나이므로
+        # 절대 빈 문자열로 남기지 않고 둘 중 하나로 확정합니다. (currency가 빈 문자열로
+        # 남으면 이후 "원화인지 아닌지" 판별이 애매해져, 국내 종목은 환율이 중복 적용되고
+        # 반대로 미국 종목은 환율 변환이 아예 빠지는 두 가지 오류가 다 날 수 있습니다.)
+        currency = info.get("currency") or ("KRW" if ticker.endswith((".KS", ".KQ")) else "USD")
         latest_close = float(hist["Close"].iloc[-1])
         prev_close = float(hist["Close"].iloc[-2]) if len(hist) >= 2 else info.get("previousClose")
         volume = int(hist["Volume"].iloc[-1]) if "Volume" in hist.columns and len(hist) else info.get("volume")
@@ -262,8 +281,8 @@ def _fetch_stock_info(ticker: str) -> dict:
 
         return {
             "ticker": ticker, "name": name, "currency": currency,
-            "market": info.get("exchange") or ("KOSPI" if ticker.endswith(".KS") else
-                     ("KOSDAQ" if ticker.endswith(".KQ") else "")),
+            "market": _EXCHANGE_LABEL.get(info.get("exchange"), info.get("exchange")) or
+                     ("KOSPI" if ticker.endswith(".KS") else ("KOSDAQ" if ticker.endswith(".KQ") else "")),
             "price": round(latest_close, 2),
             "prev_close": round(prev_close, 2) if prev_close else None,
             "change": round(change, 2) if change is not None else None,
@@ -463,7 +482,7 @@ def _fetch_stock_events(ticker: str) -> list[dict]:
 def _compute_dday(date_str: str) -> str | None:
     try:
         d = datetime.date.fromisoformat(date_str[:10])
-        delta = (d - datetime.date.today()).days
+        delta = (d - _today_kst()).days
         if delta == 0:
             return "D-DAY"
         return f"D{'+' if delta>0 else ''}{delta}"
@@ -554,7 +573,7 @@ def _us_jobs_report_dates(year: int) -> list[str]:
 def _collect_macro_events(days_ahead: int = 45) -> list[dict]:
     """상/중/하 중요도가 매겨진 매크로 일정을 모아 dDay와 함께 돌려줍니다. 실시간 조회가
     아니라 위의 하드코딩/연간 규칙 기반이며, 오늘부터 days_ahead일 이내 일정만 남깁니다."""
-    today = datetime.date.today()
+    today = _today_kst()
     horizon = today + datetime.timedelta(days=days_ahead)
     raw = []
 
@@ -747,7 +766,7 @@ def _fetch_dashboard() -> dict:
             stock_events.append(ev)
 
     all_events = macro_events + stock_events
-    today = datetime.date.today()
+    today = _today_kst()
     week_count = sum(
         1 for e in all_events
         if 0 <= (datetime.date.fromisoformat(e["date"][:10]) - today).days <= 7
@@ -805,7 +824,9 @@ def _fetch_stock_detail(ticker: str, range_key: str = "3m", interval: str = "1d"
     if is_holding:
         fx = _fetch_usd_krw_rate()
         h = next(h for h in DEMO_HOLDINGS if h["ticker"] == ticker)
-        row = _fetch_holding_row(h, fx)
+        # base(위에서 이미 조회한 이 티커의 시세)를 재사용 — 같은 요청 안에서 같은 티커를
+        # yfinance에 두 번 묻지 않도록 합니다 (레이트리밋/지연 절감).
+        row = _fetch_holding_row(h, fx, info=base)
         if "error" not in row:
             position = {
                 "profitLoss": row["profitLoss"], "profitRate": row["rate"],
