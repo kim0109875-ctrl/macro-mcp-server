@@ -1,2 +1,0 @@
-mcp[cli]<2
-yfinance
