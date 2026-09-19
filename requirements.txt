@@ -1,3 +1,0 @@
-mcp[cli]<2
-yfinance
-deep-translator
